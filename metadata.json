@@ -1,0 +1,7 @@
+{
+  "name": "Traductor AI Francés",
+  "description": "Una aplicación de traducción avanzada de español a francés con generación de texto, pronunciación fonética, reproducción de audio y práctica de habla impulsada por IA.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
