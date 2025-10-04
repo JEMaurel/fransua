@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
@@ -57,7 +56,7 @@ Texto a traducir:
 };
 
 export const generateStory = async (theme?: string) => {
-    const prompt = `Genera una historia corta en español, de aproximadamente 3 a 5 párrafos.
+    const prompt = `Genera una historia muy corta en español, de un solo párrafo (alrededor de 3 a 5 frases).
     ${theme ? `El tema de la historia es: "${theme}".` : 'La historia puede ser sobre cualquier tema interesante.'}
     Asegúrate de que la historia sea coherente y esté bien escrita.`;
 

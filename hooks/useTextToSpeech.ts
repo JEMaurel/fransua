@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useTextToSpeech = (lang: string) => {
@@ -6,6 +5,7 @@ export const useTextToSpeech = (lang: string) => {
     const [isPaused, setIsPaused] = useState(false);
     const [currentText, setCurrentText] = useState<string | null>(null);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const rateRef = useRef<number>(1); // Ref to store the current speed rate
 
     const stop = useCallback(() => {
         window.speechSynthesis.cancel();
@@ -36,6 +36,7 @@ export const useTextToSpeech = (lang: string) => {
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = lang;
+            utterance.rate = rateRef.current; // Apply the stored rate
             
             utterance.onstart = () => {
                 setIsPlaying(true);
@@ -71,7 +72,9 @@ export const useTextToSpeech = (lang: string) => {
     }, []);
 
     const setSpeed = useCallback((rate: number) => {
+        rateRef.current = rate;
         if (utteranceRef.current) {
+            // Update rate of the current utterance if it's playing
             utteranceRef.current.rate = rate;
         }
     }, []);

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { TranslationUnit } from '../types';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
@@ -14,24 +13,28 @@ const TranslationItem: React.FC<{ item: TranslationUnit, onPlay: (text: string) 
     const thisIsPlaying = isPlaying && currentText === item.translation;
 
     return (
-        <div className="grid grid-cols-[auto,1fr] gap-x-4 py-4 border-b border-gray-700 last:border-b-0">
-            <div className="text-right text-sm font-semibold text-gray-400 pt-1">ES</div>
-            <p className="text-gray-300">{item.original}</p>
-            
-            <div className="text-right text-sm font-semibold text-blue-400 pt-1">FR</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-4 border-b border-gray-700 last:border-b-0 items-start">
+            {/* Spanish Column */}
             <div className="flex items-start gap-3">
-                 <p className="flex-grow text-blue-300">{item.translation}</p>
-                 <button
+                <span className="flex-shrink-0 w-8 text-center text-sm font-semibold text-gray-400 pt-1">ES</span>
+                <p className="text-gray-300">{item.original}</p>
+            </div>
+
+            {/* French Column */}
+            <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-8 text-center text-sm font-semibold text-blue-400 pt-1">FR</span>
+                <div className="flex-grow">
+                     <p className="text-blue-300">{item.translation}</p>
+                     <p className="text-sm text-gray-500 italic mt-1">{item.pronunciation}</p>
+                </div>
+                <button
                     onClick={() => thisIsPlaying ? onStop() : onPlay(item.translation)}
-                    className="p-1.5 rounded-full bg-gray-600/50 hover:bg-blue-600 text-white transition-all duration-200"
+                    className="p-1.5 rounded-full bg-gray-600/50 hover:bg-blue-600 text-white transition-all duration-200 flex-shrink-0"
                     aria-label={thisIsPlaying ? "Detener" : "Reproducir"}
                 >
                     {thisIsPlaying ? <StopIcon /> : <PlayIcon />}
                 </button>
             </div>
-            
-            <div></div>
-            <p className="text-sm text-gray-500 italic mt-1">{item.pronunciation}</p>
         </div>
     );
 };

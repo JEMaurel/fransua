@@ -37,7 +37,6 @@ export const SpeechPractice: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const wasRecordingRef = useRef(false);
 
     useEffect(() => {
         if (!SpeechRecognition) {
@@ -47,27 +46,28 @@ export const SpeechPractice: React.FC = () => {
 
         const recognition = new SpeechRecognition();
         recognition.lang = 'fr-FR';
-        recognition.interimResults = true;
-        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.continuous = false;
 
         recognition.onstart = () => {
             setIsRecording(true);
+            setTranscript('');
+            setTranslation('');
             setError(null);
         };
 
-        recognition.onresult = (event) => {
-            let finalTranscript = '';
-            let interimTranscript = '';
-
-            for (let i = 0; i < event.results.length; ++i) {
-                const transcriptPart = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcriptPart + ' ';
-                } else {
-                    interimTranscript = transcriptPart;
-                }
+        recognition.onresult = async (event) => {
+            const currentTranscript = event.results[0][0].transcript;
+            setTranscript(currentTranscript);
+            setIsLoading(true);
+            try {
+                const spanishTranslation = await translateText(currentTranscript, 'Francés', 'Español');
+                setTranslation(spanishTranslation);
+            } catch (err) {
+                setError('No se pudo traducir el texto.');
+            } finally {
+                setIsLoading(false);
             }
-            setTranscript((finalTranscript + interimTranscript).trim());
         };
 
         recognition.onerror = (event) => {
@@ -82,33 +82,10 @@ export const SpeechPractice: React.FC = () => {
         recognitionRef.current = recognition;
 
         return () => {
-            if (recognitionRef.current) {
-                recognitionRef.current.stop();
-            }
+            recognition.stop();
         };
 
     }, []);
-
-    const handleTranslateTranscript = async (textToTranslate: string) => {
-        if (!textToTranslate) return;
-        setIsLoading(true);
-        try {
-            const spanishTranslation = await translateText(textToTranslate, 'Francés', 'Español');
-            setTranslation(spanishTranslation);
-        } catch (err) {
-            setError('No se pudo traducir el texto.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    useEffect(() => {
-        if (wasRecordingRef.current && !isRecording && transcript.trim()) {
-            handleTranslateTranscript(transcript.trim());
-        }
-        wasRecordingRef.current = isRecording;
-    }, [isRecording, transcript]);
-
 
     const handleToggleRecording = () => {
         if (!recognitionRef.current) return;
@@ -116,17 +93,7 @@ export const SpeechPractice: React.FC = () => {
         if (isRecording) {
             recognitionRef.current.stop();
         } else {
-            setTranscript('');
-            setTranslation('');
-            setError(null);
-            
-            const greeting = new SpeechSynthesisUtterance('Bonjour');
-            greeting.lang = 'fr-FR';
-            greeting.onend = () => {
-                recognitionRef.current?.start();
-            };
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(greeting);
+            recognitionRef.current.start();
         }
     };
     
@@ -140,18 +107,17 @@ export const SpeechPractice: React.FC = () => {
                     onClick={handleToggleRecording}
                     disabled={!!error}
                     className={`relative flex items-center justify-center w-24 h-24 rounded-full transition-all duration-300 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-600 disabled:cursor-not-allowed`}
-                    aria-label={isRecording ? 'Dejar de grabar' : 'Empezar a grabar'}
                 >
                     <MicrophoneIcon />
                 </button>
 
                 {error && <p className="text-red-400 text-sm">{error}</p>}
 
-                {(isRecording || transcript || isLoading || translation) && (
+                {(transcript || isLoading || translation) && (
                     <div className="w-full bg-gray-900/70 rounded-lg p-4 border border-gray-600 mt-4 space-y-4">
                         <div>
                             <h3 className="text-sm font-semibold text-gray-400 mb-1">Tu voz (Francés):</h3>
-                            <p className="text-lg text-blue-300 min-h-[28px]">{transcript || (isRecording ? 'Escuchando...' : '...')}</p>
+                            <p className="text-lg text-blue-300">{transcript || '...'}</p>
                         </div>
                         <div className="border-t border-gray-700"></div>
                         <div>
@@ -159,7 +125,7 @@ export const SpeechPractice: React.FC = () => {
                             {isLoading ? (
                                 <p className="text-lg text-gray-200">Traduciendo...</p>
                             ) : (
-                                <p className="text-lg text-gray-200 min-h-[28px]">{translation || '...'}</p>
+                                <p className="text-lg text-gray-200">{translation || '...'}</p>
                             )}
                         </div>
                     </div>
