@@ -108,7 +108,7 @@ export const SpeechPractice: React.FC = () => {
                     disabled={!!error}
                     className={`relative flex items-center justify-center w-24 h-24 rounded-full transition-all duration-300 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-600 disabled:cursor-not-allowed`}
                 >
-                    <MicrophoneIcon />
+                    <MicrophoneIcon className="h-10 w-10 text-white" />
                 </button>
 
                 {error && <p className="text-red-400 text-sm">{error}</p>}

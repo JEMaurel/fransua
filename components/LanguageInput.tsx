@@ -1,6 +1,5 @@
-
-import React, { useState, useRef } from 'react';
-import { UploadIcon, SparklesIcon, TranslateIcon } from './icons';
+import React, { useState, useRef, useEffect } from 'react';
+import { UploadIcon, SparklesIcon, TranslateIcon, MicrophoneIcon } from './icons';
 
 interface LanguageInputProps {
   onTranslate: (text: string) => void;
@@ -9,10 +8,79 @@ interface LanguageInputProps {
   isLoading: boolean;
 }
 
+// Add SpeechRecognition types for cross-browser compatibility
+interface SpeechRecognition extends EventTarget {
+    lang: string;
+    interimResults: boolean;
+    continuous: boolean;
+    onstart: (() => void) | null;
+    onresult: ((event: any) => void) | null;
+    onerror: ((event: any) => void) | null;
+    onend: (() => void) | null;
+    start: () => void;
+    stop: () => void;
+}
+interface SpeechRecognitionStatic {
+    new(): SpeechRecognition;
+}
+declare global {
+    interface Window {
+        SpeechRecognition: SpeechRecognitionStatic;
+        webkitSpeechRecognition: SpeechRecognitionStatic;
+    }
+}
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+
 export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGenerateStory, onImageUpload, isLoading }) => {
   const [text, setText] = useState('');
   const [storyTheme, setStoryTheme] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    if (!SpeechRecognition) {
+      console.error("Speech recognition not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES'; // Spanish
+    recognition.interimResults = true; // Show results as they come
+    recognition.continuous = false; // Stop after a pause
+
+    recognition.onstart = () => {
+        setIsRecording(true);
+        setText('');
+        onTranslate(''); // Clear previous translation
+    };
+
+    recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        setText(transcript);
+    };
+
+    recognition.onerror = (event) => {
+        console.error(`Speech recognition error: ${event.error}`);
+        setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+        setIsRecording(false);
+    };
+    
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [onTranslate]);
 
   const handleTranslateClick = () => {
     onTranslate(text);
@@ -34,6 +102,16 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+
+  const handleToggleRecording = () => {
+    if (!recognitionRef.current) return;
+
+    if (isRecording) {
+        recognitionRef.current.stop();
+    } else {
+        recognitionRef.current.start();
+    }
+  };
   
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 flex flex-col h-full">
@@ -41,7 +119,7 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Escribe una frase, pega un párrafo o sube una imagen..."
+        placeholder="Escribe una frase, habla al micrófono, o sube una imagen..."
         className="w-full flex-grow bg-gray-900/70 border border-gray-600 rounded-lg p-4 text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-300 resize-none min-h-[250px] text-base"
         disabled={isLoading}
       />
@@ -80,6 +158,14 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
                 className="hidden"
                 accept="image/*"
             />
+            <button
+                onClick={handleToggleRecording}
+                disabled={isLoading}
+                aria-label={isRecording ? 'Detener grabación' : 'Grabar voz'}
+                className={`w-full sm:w-auto flex-shrink-0 flex items-center justify-center p-3 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${isRecording ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-gray-600 hover:bg-gray-700'}`}
+            >
+                <MicrophoneIcon className="h-6 w-6 text-white"/>
+            </button>
             <button
                 onClick={handleTranslateClick}
                 disabled={isLoading || !text.trim()}
