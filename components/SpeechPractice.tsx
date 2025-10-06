@@ -39,11 +39,32 @@ export const SpeechPractice: React.FC = () => {
     const recognitionRef = useRef<SpeechRecognition | null>(null);
 
     useEffect(() => {
+        // Check for browser support on mount
         if (!SpeechRecognition) {
             setError('La API de reconocimiento de voz no es compatible con este navegador.');
+        }
+
+        // Cleanup on unmount
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+                recognitionRef.current = null;
+            }
+        };
+    }, []);
+
+    const handleToggleRecording = () => {
+        if (isRecording) {
+            recognitionRef.current?.stop();
             return;
         }
 
+        if (!SpeechRecognition) {
+            // Error is already set by useEffect, but this is a safeguard.
+            return;
+        }
+
+        // Create a new recognition instance for each recording session
         const recognition = new SpeechRecognition();
         recognition.lang = 'fr-FR';
         recognition.interimResults = false;
@@ -71,30 +92,21 @@ export const SpeechPractice: React.FC = () => {
         };
 
         recognition.onerror = (event) => {
-            setError(`Error de reconocimiento: ${event.error}`);
+            // Don't show an error if the user stops it manually
+            if (event.error !== 'aborted') {
+              setError(`Error de reconocimiento: ${event.error}`);
+            }
             setIsRecording(false);
+            recognitionRef.current = null;
         };
 
         recognition.onend = () => {
             setIsRecording(false);
+            recognitionRef.current = null;
         };
         
         recognitionRef.current = recognition;
-
-        return () => {
-            recognition.stop();
-        };
-
-    }, []);
-
-    const handleToggleRecording = () => {
-        if (!recognitionRef.current) return;
-
-        if (isRecording) {
-            recognitionRef.current.stop();
-        } else {
-            recognitionRef.current.start();
-        }
+        recognition.start();
     };
     
     return (
@@ -107,6 +119,7 @@ export const SpeechPractice: React.FC = () => {
                     onClick={handleToggleRecording}
                     disabled={!!error}
                     className={`relative flex items-center justify-center w-24 h-24 rounded-full transition-all duration-300 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-blue-600 hover:bg-blue-700'} disabled:bg-gray-600 disabled:cursor-not-allowed`}
+                    aria-label={isRecording ? 'Detener grabación' : 'Grabar voz'}
                 >
                     <MicrophoneIcon className="h-10 w-10 text-white" />
                 </button>
