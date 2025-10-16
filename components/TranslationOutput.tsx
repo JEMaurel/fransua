@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { TranslationUnit } from '../types';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
-import { PlayIcon, PauseIcon, StopIcon, VolumeIcon } from './icons';
+import { PlayIcon, StopIcon, VolumeIcon, RepeatIcon } from './icons';
 
 interface TranslationOutputProps {
   results: TranslationUnit[];
@@ -9,7 +9,17 @@ interface TranslationOutputProps {
   error: string | null;
 }
 
-const TranslationItem: React.FC<{ item: TranslationUnit, onPlay: (text: string) => void, onStop: () => void, isPlaying: boolean, currentText: string | null }> = ({ item, onPlay, onStop, isPlaying, currentText }) => {
+interface TranslationItemProps {
+    item: TranslationUnit;
+    onPlay: (text: string) => void;
+    onStop: () => void;
+    onToggleLoop: () => void;
+    isPlaying: boolean;
+    isLooping: boolean;
+    currentText: string | null;
+}
+
+const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop, onToggleLoop, isPlaying, isLooping, currentText }) => {
     const thisIsPlaying = isPlaying && currentText === item.translation;
 
     return (
@@ -27,13 +37,22 @@ const TranslationItem: React.FC<{ item: TranslationUnit, onPlay: (text: string) 
                      <p className="text-blue-300">{item.translation}</p>
                      <p className="text-sm text-gray-500 italic mt-1">{item.pronunciation}</p>
                 </div>
-                <button
-                    onClick={() => thisIsPlaying ? onStop() : onPlay(item.translation)}
-                    className="p-1.5 rounded-full bg-gray-600/50 hover:bg-blue-600 text-white transition-all duration-200 flex-shrink-0"
-                    aria-label={thisIsPlaying ? "Detener" : "Reproducir"}
-                >
-                    {thisIsPlaying ? <StopIcon /> : <PlayIcon />}
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                        onClick={onToggleLoop}
+                        className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 font-mono font-bold text-sm ${isLooping ? 'bg-blue-600 text-white' : 'bg-gray-600/50 hover:bg-blue-800 text-gray-300'}`}
+                        aria-label={isLooping ? "Desactivar ciclo" : "Activar ciclo"}
+                    >
+                        C
+                    </button>
+                    <button
+                        onClick={() => thisIsPlaying ? onStop() : onPlay(item.translation)}
+                        className="p-1.5 rounded-full bg-gray-600/50 hover:bg-blue-600 text-white transition-all duration-200"
+                        aria-label={thisIsPlaying ? "Detener" : "Reproducir"}
+                    >
+                        {thisIsPlaying ? <StopIcon /> : <PlayIcon />}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -43,6 +62,8 @@ const TranslationItem: React.FC<{ item: TranslationUnit, onPlay: (text: string) 
 export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, isLoading, error }) => {
     const { play, pause, stop, setSpeed, isPlaying, isPaused, currentText } = useTextToSpeech('fr-FR');
     const [speed, setSpeedValue] = useState(1);
+    const [isGlobalLooping, setIsGlobalLooping] = useState(false);
+    const [loopingItemIndex, setLoopingItemIndex] = useState<number | null>(null);
 
     useEffect(() => {
         setSpeed(speed);
@@ -50,18 +71,48 @@ export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, i
 
     const handlePlayAll = () => {
         const fullText = results.map(r => r.translation).join(' ');
-        if (isPlaying && !isPaused) {
+        if (isPlaying && !isPaused && currentText === fullText) {
             pause();
-        } else if (isPlaying && isPaused) {
+        } else if (isPlaying && isPaused && currentText === fullText) {
             play(); // resume
         } else {
-            play(fullText);
+            stop(); // Stop any other playback
+            setLoopingItemIndex(null); // Clear individual loop
+            play({ text: fullText, loop: isGlobalLooping });
         }
     };
     
+    const handleToggleGlobalLoop = () => {
+        const nextState = !isGlobalLooping;
+        setIsGlobalLooping(nextState);
+        if (nextState) {
+            setLoopingItemIndex(null);
+        }
+        if (isPlaying) {
+            stop();
+        }
+    };
+
+    const handlePlaySingle = (text: string, index: number) => {
+        stop();
+        setIsGlobalLooping(false);
+        play({ text, loop: loopingItemIndex === index });
+    };
+
+    const handleToggleLoopSingle = (index: number) => {
+        if (isPlaying) stop();
+        
+        if (loopingItemIndex === index) {
+            setLoopingItemIndex(null); // Toggle off
+        } else {
+            setLoopingItemIndex(index); // Toggle on for this item
+            setIsGlobalLooping(false); // Ensure global loop is off
+        }
+    };
+
     return (
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
                 <h2 className="text-lg font-semibold text-white">Traducción al Francés</h2>
                 {results.length > 0 && (
                      <div className="flex items-center gap-4">
@@ -79,12 +130,19 @@ export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, i
                             />
                         </div>
                         <button 
+                            onClick={handleToggleGlobalLoop}
+                            className={`flex items-center gap-2 text-white font-semibold py-2 px-3 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${isGlobalLooping ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'}`}
+                        >
+                           <RepeatIcon />
+                           Ciclo
+                        </button>
+                        <button 
                             onClick={handlePlayAll}
                             disabled={isLoading}
                             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <VolumeIcon />
-                            {isPlaying && !isPaused ? 'Pausar' : 'Escuchar Todo'}
+                            {isPlaying && !isPaused && currentText === results.map(r => r.translation).join(' ') ? 'Pausar' : 'Escuchar Todo'}
                         </button>
                          {isPlaying && <button onClick={stop} className="p-2 rounded-full bg-red-600 hover:bg-red-700"><StopIcon /></button>}
                     </div>
@@ -108,9 +166,11 @@ export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, i
                            <TranslationItem 
                                 key={index} 
                                 item={item}
-                                onPlay={play}
+                                onPlay={(text) => handlePlaySingle(text, index)}
                                 onStop={stop}
+                                onToggleLoop={() => handleToggleLoopSingle(index)}
                                 isPlaying={isPlaying}
+                                isLooping={loopingItemIndex === index}
                                 currentText={currentText}
                             />
                         ))}
