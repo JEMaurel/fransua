@@ -27,7 +27,12 @@ const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop,
             {/* Spanish Column */}
             <div className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-8 text-center text-sm font-semibold text-gray-400 pt-1">ES</span>
-                <p className="text-gray-300">{item.original}</p>
+                <p className="text-gray-300 flex-grow">{item.original}</p>
+                {/* Invisible placeholder to balance the layout with the French column's buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0 opacity-0 pointer-events-none" aria-hidden="true">
+                    <div className="w-7 h-7" />
+                    <div className="w-7 h-7" />
+                </div>
             </div>
 
             {/* French Column */}
@@ -47,7 +52,7 @@ const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop,
                     </button>
                     <button
                         onClick={() => thisIsPlaying ? onStop() : onPlay(item.translation)}
-                        className="p-1.5 rounded-full bg-gray-600/50 hover:bg-blue-600 text-white transition-all duration-200"
+                        className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-600/50 hover:bg-blue-600 text-white transition-all duration-200"
                         aria-label={thisIsPlaying ? "Detener" : "Reproducir"}
                     >
                         {thisIsPlaying ? <StopIcon /> : <PlayIcon />}
