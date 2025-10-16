@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { LanguageInput } from './components/LanguageInput';
 import { TranslationOutput } from './components/TranslationOutput';
@@ -104,7 +103,7 @@ const App: React.FC = () => {
         </header>
 
         <main className="space-y-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className={`grid grid-cols-1 ${translationResult.length > 0 ? 'lg:grid-cols-[1fr_4fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
             <LanguageInput 
               onTranslate={handleTranslate}
               onGenerateStory={handleGenerateStory}

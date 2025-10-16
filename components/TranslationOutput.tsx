@@ -23,25 +23,15 @@ const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop,
     const thisIsPlaying = isPlaying && currentText === item.translation;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 py-4 border-b border-gray-700 last:border-b-0 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_4fr_3fr] gap-x-6 gap-y-4 py-4 border-b border-gray-700 last:border-b-0 items-start">
             {/* Spanish Column */}
-            <div className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-8 text-center text-sm font-semibold text-gray-400 pt-1">ES</span>
-                <p className="text-gray-300 flex-grow">{item.original}</p>
-                {/* Invisible placeholder to balance the layout with the French column's buttons */}
-                <div className="flex items-center gap-2 flex-shrink-0 opacity-0 pointer-events-none" aria-hidden="true">
-                    <div className="w-7 h-7" />
-                    <div className="w-7 h-7" />
-                </div>
+            <div>
+                <p className="text-gray-300">{item.original}</p>
             </div>
 
             {/* French Column */}
-            <div className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-8 text-center text-sm font-semibold text-blue-400 pt-1">FR</span>
-                <div className="flex-grow">
-                     <p className="text-blue-300">{item.translation}</p>
-                     <p className="text-sm text-gray-500 italic mt-1">{item.pronunciation}</p>
-                </div>
+            <div className="flex items-start justify-between gap-3">
+                <p className="text-blue-300 flex-grow">{item.translation}</p>
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                         onClick={onToggleLoop}
@@ -58,6 +48,11 @@ const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop,
                         {thisIsPlaying ? <StopIcon /> : <PlayIcon />}
                     </button>
                 </div>
+            </div>
+
+            {/* Phonetics Column */}
+            <div>
+                 <p className="text-sm text-gray-500 italic">{item.pronunciation}</p>
             </div>
         </div>
     );
@@ -167,6 +162,11 @@ export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, i
                 )}
                 {!isLoading && !error && results.length > 0 && (
                     <div className="px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-[2fr_4fr_3fr] gap-x-6 pb-2 text-sm font-bold text-gray-400 border-b-2 border-gray-600">
+                            <h3>Español</h3>
+                            <h3>Francés</h3>
+                            <h3>Pronunciación</h3>
+                        </div>
                         {results.map((item, index) => (
                            <TranslationItem 
                                 key={index} 
