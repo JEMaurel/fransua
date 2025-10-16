@@ -43,20 +43,47 @@ const App: React.FC = () => {
     }
   }, []);
   
-  const handleGenerateStory = useCallback(async (theme?: string) => {
+  const handleGenerateAndTranslate = useCallback(async (theme?: string) => {
     setIsLoading(true);
     setError(null);
+    setTranslationResult([]); // Clear previous results
     try {
+      // Step 1: Generate Story
       const story = await generateStory(theme);
-      return story;
+      
+      if (!story) {
+        throw new Error('La generación de la historia no devolvió ningún texto.');
+      }
+      
+      // Step 2: Translate Story
+      const result = await translateAndPronounce(story);
+      
+      // Handle result logic from handleTranslate
+      if (Array.isArray(result)) {
+          setTranslationResult(result);
+      } else if (result && typeof result === 'object') {
+          const singleResult = result as unknown as TranslationUnit;
+          if(singleResult.original && singleResult.translation && singleResult.pronunciation) {
+            setTranslationResult([singleResult]);
+          } else {
+             throw new Error('La API devolvió un formato de traducción inesperado.');
+          }
+      } else {
+          throw new Error('La respuesta de la API no es un formato de traducción válido.');
+      }
+      
+      // Return the story to update the input field
+      return story; 
     } catch (err) {
       console.error(err);
-      setError('No se pudo generar la historia. Inténtelo de nuevo.');
+      const errorMessage = err instanceof Error ? err.message : 'Un error desconocido ocurrió.';
+      setError(`No se pudo generar y traducir la historia. ${errorMessage}`);
+      setTranslationResult([]);
       return '';
     } finally {
       setIsLoading(false);
     }
-  }, []);
+}, []);
 
   const handleImageUpload = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -106,7 +133,7 @@ const App: React.FC = () => {
           <div className={`grid grid-cols-1 ${translationResult.length > 0 ? 'lg:grid-cols-[1fr_4fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
             <LanguageInput 
               onTranslate={handleTranslate}
-              onGenerateStory={handleGenerateStory}
+              onGenerateAndTranslate={handleGenerateAndTranslate}
               onImageUpload={handleImageUpload}
               isLoading={isLoading}
             />

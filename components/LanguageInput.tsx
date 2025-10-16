@@ -3,7 +3,7 @@ import { UploadIcon, SparklesIcon, TranslateIcon, MicrophoneIcon } from './icons
 
 interface LanguageInputProps {
   onTranslate: (text: string) => void;
-  onGenerateStory: (theme?: string) => Promise<string>;
+  onGenerateAndTranslate: (theme?: string) => Promise<string>;
   onImageUpload: (file: File) => Promise<string>;
   isLoading: boolean;
 }
@@ -32,7 +32,7 @@ declare global {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 
-export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGenerateStory, onImageUpload, isLoading }) => {
+export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGenerateAndTranslate, onImageUpload, isLoading }) => {
   const [text, setText] = useState('');
   const [storyTheme, setStoryTheme] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,8 +86,8 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
     onTranslate(text);
   };
   
-  const handleGenerateStory = async () => {
-    const story = await onGenerateStory(storyTheme || undefined);
+  const handleGenerateAndTranslateClick = async () => {
+    const story = await onGenerateAndTranslate(storyTheme || undefined);
     setText(story);
   };
 
@@ -134,12 +134,12 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
             disabled={isLoading}
           />
           <button 
-            onClick={handleGenerateStory}
+            onClick={handleGenerateAndTranslateClick}
             disabled={isLoading}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
           >
             <SparklesIcon />
-            Generar Historia
+            Generar Historia y Traducir
           </button>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3">
