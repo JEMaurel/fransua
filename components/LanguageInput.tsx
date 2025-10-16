@@ -38,49 +38,20 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [speechError, setSpeechError] = useState<string | null>(null);
 
+  // Check for browser support and cleanup on unmount
   useEffect(() => {
     if (!SpeechRecognition) {
-      console.error("Speech recognition not supported in this browser.");
-      return;
+      setSpeechError('El reconocimiento de voz no es compatible con este navegador.');
     }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-ES'; // Spanish
-    recognition.interimResults = true; // Show results as they come
-    recognition.continuous = false; // Stop after a pause
-
-    recognition.onstart = () => {
-        setIsRecording(true);
-        setText('');
-        onTranslate(''); // Clear previous translation
-    };
-
-    recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-        }
-        setText(transcript);
-    };
-
-    recognition.onerror = (event) => {
-        console.error(`Speech recognition error: ${event.error}`);
-        setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-        setIsRecording(false);
-    };
-    
-    recognitionRef.current = recognition;
-
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
     };
-  }, [onTranslate]);
+  }, []);
 
   const handleTranslateClick = () => {
     onTranslate(text);
@@ -104,18 +75,57 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
   };
 
   const handleToggleRecording = () => {
-    if (!recognitionRef.current) return;
-
     if (isRecording) {
-        recognitionRef.current.stop();
-    } else {
-        recognitionRef.current.start();
+        recognitionRef.current?.stop();
+        return;
     }
+
+    if (!SpeechRecognition) {
+        return; // Error is already set by useEffect
+    }
+
+    // Create a new recognition instance for each recording session
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+        setIsRecording(true);
+        setSpeechError(null);
+        setText('');
+        onTranslate(''); // Clear previous translation
+    };
+
+    recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        setText(transcript);
+    };
+
+    recognition.onerror = (event) => {
+        if (event.error !== 'aborted') {
+            setSpeechError(`Error de reconocimiento: ${event.error}`);
+        }
+        setIsRecording(false);
+        recognitionRef.current = null;
+    };
+
+    recognition.onend = () => {
+        setIsRecording(false);
+        recognitionRef.current = null;
+    };
+    
+    recognitionRef.current = recognition;
+    recognition.start();
   };
   
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 flex flex-col h-full">
       <h2 className="text-lg font-semibold text-white mb-4">Texto en Español</h2>
+      {speechError && <p className="text-red-400 text-sm mb-2">{speechError}</p>}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -160,7 +170,7 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
             />
             <button
                 onClick={handleToggleRecording}
-                disabled={isLoading}
+                disabled={isLoading || !!speechError}
                 aria-label={isRecording ? 'Detener grabación' : 'Grabar voz'}
                 className={`w-full sm:w-auto flex-shrink-0 flex items-center justify-center p-3 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${isRecording ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-gray-600 hover:bg-gray-700'}`}
             >

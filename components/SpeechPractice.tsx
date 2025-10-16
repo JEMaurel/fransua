@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { translateText } from '../services/geminiService';
 import { MicrophoneIcon } from './icons';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 // Fix: Add TypeScript type definitions for the Web Speech API to fix errors.
 // This resolves errors about SpeechRecognition not existing on `window` and allows for strong typing.
@@ -37,6 +38,7 @@ export const SpeechPractice: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const { play: playGreeting, stop: stopGreeting } = useTextToSpeech('fr-FR');
 
     useEffect(() => {
         // Check for browser support on mount
@@ -50,8 +52,9 @@ export const SpeechPractice: React.FC = () => {
                 recognitionRef.current.stop();
                 recognitionRef.current = null;
             }
+            stopGreeting();
         };
-    }, []);
+    }, [stopGreeting]);
 
     const handleToggleRecording = () => {
         if (isRecording) {
@@ -63,50 +66,57 @@ export const SpeechPractice: React.FC = () => {
             // Error is already set by useEffect, but this is a safeguard.
             return;
         }
+        
+        const startRecognition = () => {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'fr-FR';
+            recognition.interimResults = false;
+            recognition.continuous = false;
 
-        // Create a new recognition instance for each recording session
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'fr-FR';
-        recognition.interimResults = false;
-        recognition.continuous = false;
+            recognition.onstart = () => {
+                setIsRecording(true);
+                setTranscript('');
+                setTranslation('');
+                setError(null);
+            };
 
-        recognition.onstart = () => {
-            setIsRecording(true);
-            setTranscript('');
-            setTranslation('');
-            setError(null);
-        };
+            recognition.onresult = async (event) => {
+                const currentTranscript = event.results[0][0].transcript;
+                setTranscript(currentTranscript);
+                setIsLoading(true);
+                try {
+                    const spanishTranslation = await translateText(currentTranscript, 'Francés', 'Español');
+                    setTranslation(spanishTranslation);
+                } catch (err) {
+                    setError('No se pudo traducir el texto.');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
 
-        recognition.onresult = async (event) => {
-            const currentTranscript = event.results[0][0].transcript;
-            setTranscript(currentTranscript);
-            setIsLoading(true);
-            try {
-                const spanishTranslation = await translateText(currentTranscript, 'Francés', 'Español');
-                setTranslation(spanishTranslation);
-            } catch (err) {
-                setError('No se pudo traducir el texto.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
+            recognition.onerror = (event) => {
+                // Don't show an error if the user stops it manually
+                if (event.error !== 'aborted') {
+                  setError(`Error de reconocimiento: ${event.error}`);
+                }
+                setIsRecording(false);
+                recognitionRef.current = null;
+            };
 
-        recognition.onerror = (event) => {
-            // Don't show an error if the user stops it manually
-            if (event.error !== 'aborted') {
-              setError(`Error de reconocimiento: ${event.error}`);
-            }
-            setIsRecording(false);
-            recognitionRef.current = null;
-        };
-
-        recognition.onend = () => {
-            setIsRecording(false);
-            recognitionRef.current = null;
+            recognition.onend = () => {
+                setIsRecording(false);
+                recognitionRef.current = null;
+            };
+            
+            recognitionRef.current = recognition;
+            recognition.start();
         };
         
-        recognitionRef.current = recognition;
-        recognition.start();
+        // Play the greeting, and once it's finished, start the recognition
+        playGreeting({
+            text: 'Bonjour',
+            onEnd: startRecognition
+        });
     };
     
     return (
