@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UploadIcon, SparklesIcon, TranslateIcon, MicrophoneIcon } from './icons';
+import { UploadIcon, SparklesIcon, TranslateIcon, MicrophoneIcon, ClearIcon } from './icons';
 
 interface LanguageInputProps {
   onTranslate: (text: string) => void;
@@ -122,6 +122,11 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
     recognition.start();
   };
   
+  const handleClearClick = () => {
+    setText('');
+    onTranslate('');
+  };
+
   return (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 flex flex-col h-full">
       <h2 className="text-lg font-semibold text-white mb-4">Texto en Español</h2>
@@ -175,6 +180,14 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
                 className={`w-full sm:w-auto flex-shrink-0 flex items-center justify-center p-3 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${isRecording ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-gray-600 hover:bg-gray-700'}`}
             >
                 <MicrophoneIcon className="h-6 w-6 text-white"/>
+            </button>
+             <button
+                onClick={handleClearClick}
+                disabled={isLoading || !text.trim()}
+                aria-label="Limpiar texto"
+                className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center p-3 rounded-md transition-all duration-300 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <ClearIcon className="h-6 w-6 text-white"/>
             </button>
             <button
                 onClick={handleTranslateClick}

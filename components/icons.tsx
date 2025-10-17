@@ -60,3 +60,9 @@ export const LogoIcon: React.FC = () => (
         <path d="M19.5 3.5C15.634 3.5 12.5 6.63401 12.5 10.5C12.5 14.366 15.634 17.5 19.5 17.5C21.433 17.5 23.176 16.634 24 15.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
 );
+
+export const ClearIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+    </svg>
+);
