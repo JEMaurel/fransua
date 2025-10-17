@@ -1,15 +1,29 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { LanguageInput } from './components/LanguageInput';
 import { TranslationOutput } from './components/TranslationOutput';
 import { SpeechPractice } from './components/SpeechPractice';
+import { SavedTranslations } from './components/SavedTranslations';
 import { TranslationUnit } from './types';
-import { translateAndPronounce, generateStory, getTextFromImage } from './services/geminiService';
+import { translateAndPronounce, generateStory, getTextFromImage, translateWithChat, resetChat } from './services/geminiService';
 import { LogoIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [translationResult, setTranslationResult] = useState<TranslationUnit[]>([]);
+  const [savedTranslations, setSavedTranslations] = useState<TranslationUnit[]>([]);
+  const [isSavedExpanded, setIsSavedExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const storedTranslations = localStorage.getItem('savedTranslations');
+      if (storedTranslations) {
+        setSavedTranslations(JSON.parse(storedTranslations));
+      }
+    } catch (e) {
+      console.error("No se pudieron cargar las traducciones guardadas:", e);
+    }
+  }, []);
 
   const handleTranslate = useCallback(async (text: string) => {
     if (!text.trim()) {
@@ -19,17 +33,15 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await translateAndPronounce(text);
-      // Gemini can sometimes return an object instead of an array for single sentences
+      const result = await translateWithChat(text);
       if (Array.isArray(result)) {
         setTranslationResult(result);
       } else if (result && typeof result === 'object') {
-        // Coerce single object into an array
         const singleResult = result as unknown as TranslationUnit;
-        if(singleResult.original && singleResult.translation && singleResult.pronunciation) {
+        if (singleResult.original && singleResult.translation && singleResult.pronunciation) {
           setTranslationResult([singleResult]);
         } else {
-           throw new Error('La API devolvió un formato inesperado.');
+          throw new Error('La API devolvió un formato inesperado.');
         }
       } else {
         throw new Error('La respuesta de la API no es un formato de traducción válido.');
@@ -43,37 +55,35 @@ const App: React.FC = () => {
     }
   }, []);
   
+  const handleResetChat = useCallback(() => {
+    resetChat();
+    setError(null);
+  }, []);
+
   const handleGenerateAndTranslate = useCallback(async (theme?: string) => {
     setIsLoading(true);
     setError(null);
-    setTranslationResult([]); // Clear previous results
+    setTranslationResult([]);
+    resetChat(); // Start a new chat for the story
     try {
-      // Step 1: Generate Story
       const story = await generateStory(theme);
-      
       if (!story) {
         throw new Error('La generación de la historia no devolvió ningún texto.');
       }
-      
-      // Step 2: Translate Story
-      const result = await translateAndPronounce(story);
-      
-      // Handle result logic from handleTranslate
+      const result = await translateWithChat(story);
       if (Array.isArray(result)) {
-          setTranslationResult(result);
+        setTranslationResult(result);
       } else if (result && typeof result === 'object') {
-          const singleResult = result as unknown as TranslationUnit;
-          if(singleResult.original && singleResult.translation && singleResult.pronunciation) {
-            setTranslationResult([singleResult]);
-          } else {
-             throw new Error('La API devolvió un formato de traducción inesperado.');
-          }
+        const singleResult = result as unknown as TranslationUnit;
+        if (singleResult.original && singleResult.translation && singleResult.pronunciation) {
+          setTranslationResult([singleResult]);
+        } else {
+          throw new Error('La API devolvió un formato de traducción inesperado.');
+        }
       } else {
-          throw new Error('La respuesta de la API no es un formato de traducción válido.');
+        throw new Error('La respuesta de la API no es un formato de traducción válido.');
       }
-      
-      // Return the story to update the input field
-      return story; 
+      return story;
     } catch (err) {
       console.error(err);
       const errorMessage = err instanceof Error ? err.message : 'Un error desconocido ocurrió.';
@@ -83,7 +93,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-}, []);
+  }, []);
 
   const handleImageUpload = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -116,6 +126,20 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleToggleSave = useCallback((itemToToggle: TranslationUnit) => {
+    setSavedTranslations(prev => {
+      const isSaved = prev.some(item => item.original === itemToToggle.original);
+      let newSaved;
+      if (isSaved) {
+        newSaved = prev.filter(item => item.original !== itemToToggle.original);
+      } else {
+        newSaved = [...prev, itemToToggle];
+      }
+      localStorage.setItem('savedTranslations', JSON.stringify(newSaved));
+      return newSaved;
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-gray-200 font-sans p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -130,19 +154,30 @@ const App: React.FC = () => {
         </header>
 
         <main className="space-y-12">
-          <div className={`grid grid-cols-1 ${translationResult.length > 0 ? 'lg:grid-cols-[1fr_4fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
-            <LanguageInput 
+          <div className={`grid grid-cols-1 ${translationResult.length > 0 || savedTranslations.length > 0 ? 'lg:grid-cols-[2fr_3fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
+            <LanguageInput
               onTranslate={handleTranslate}
               onGenerateAndTranslate={handleGenerateAndTranslate}
               onImageUpload={handleImageUpload}
+              onResetChat={handleResetChat}
               isLoading={isLoading}
             />
             <TranslationOutput
               results={translationResult}
               isLoading={isLoading}
               error={error}
+              onToggleSave={handleToggleSave}
+              savedTranslations={savedTranslations}
             />
           </div>
+          {savedTranslations.length > 0 && (
+            <SavedTranslations
+              items={savedTranslations}
+              onRemove={handleToggleSave}
+              isExpanded={isSavedExpanded}
+              onToggleExpand={() => setIsSavedExpanded(!isSavedExpanded)}
+            />
+          )}
           <SpeechPractice />
         </main>
       </div>

@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Chat } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
 
@@ -9,6 +9,8 @@ if (!API_KEY) {
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 const model = ai.models;
 
+let chat: Chat | null = null;
+
 const translationSchema = {
     type: Type.ARRAY,
     items: {
@@ -16,7 +18,7 @@ const translationSchema = {
         properties: {
             original: {
                 type: Type.STRING,
-                description: "La oración original en español.",
+                description: "La oración original en español que se está traduciendo.",
             },
             translation: {
                 type: Type.STRING,
@@ -31,6 +33,54 @@ const translationSchema = {
     },
 };
 
+const startTranslationChat = () => {
+    chat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: `Eres un traductor experto de español a francés. Tu tarea es traducir el texto proporcionado por el usuario.
+- Siempre responde en formato JSON que se ajuste al esquema proporcionado.
+- Divide el texto en oraciones si es necesario y proporciona una traducción y pronunciación para cada una.
+- Si el usuario te pide que cambies algo (por ejemplo, "cambia 'coche' por 'auto'"), entiende que se refiere al texto anterior y proporciona una traducción nueva y completa de la frase modificada.
+- Mantén el contexto de la conversación para permitir traducciones iterativas.`,
+        },
+    });
+};
+
+export const translateWithChat = async (text: string) => {
+    if (!chat) {
+        startTranslationChat();
+    }
+
+    const prompt = `Traduce el siguiente texto, o modifica la traducción anterior según mi petición. Devuelve el resultado como un JSON que se ajuste al esquema proporcionado.
+
+Texto: "${text}"`;
+
+    try {
+        if (!chat) throw new Error("El chat no está inicializado.");
+        
+        const response = await chat.sendMessage({
+            message: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: translationSchema,
+            }
+        });
+
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (error) {
+        console.error("Error en la traducción de Gemini (Chat):", error);
+        resetChat(); // Reset chat on error to start fresh
+        throw new Error("La solicitud de traducción a la API de Gemini falló.");
+    }
+};
+
+export const resetChat = () => {
+    chat = null;
+};
+
+
+// Standalone translation for one-off tasks like story generation
 export const translateAndPronounce = async (text: string) => {
     const prompt = `Traduce el siguiente texto de español a francés. Divide el texto en oraciones si es necesario. Para cada oración, proporciona el texto original, la traducción al francés y una guía de pronunciación fonética simple y fácil de leer. Devuelve el resultado como un JSON que se ajuste al esquema proporcionado.
 

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { TranslationUnit } from '../types';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
-import { PlayIcon, StopIcon, VolumeIcon, RepeatIcon } from './icons';
+import { PlayIcon, StopIcon, VolumeIcon, RepeatIcon, StarIcon } from './icons';
 
 interface TranslationOutputProps {
   results: TranslationUnit[];
   isLoading: boolean;
   error: string | null;
+  onToggleSave: (item: TranslationUnit) => void;
+  savedTranslations: TranslationUnit[];
 }
 
 interface TranslationItemProps {
@@ -14,12 +16,14 @@ interface TranslationItemProps {
     onPlay: (text: string) => void;
     onStop: () => void;
     onToggleLoop: () => void;
+    onToggleSave: (item: TranslationUnit) => void;
+    isSaved: boolean;
     isPlaying: boolean;
     isLooping: boolean;
     currentText: string | null;
 }
 
-const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop, onToggleLoop, isPlaying, isLooping, currentText }) => {
+const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop, onToggleLoop, onToggleSave, isSaved, isPlaying, isLooping, currentText }) => {
     const thisIsPlaying = isPlaying && currentText === item.translation;
 
     return (
@@ -33,6 +37,13 @@ const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop,
             <div className="flex items-start justify-between gap-3">
                 <p className="text-blue-300 flex-grow">{item.translation}</p>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                   <button
+                        onClick={() => onToggleSave(item)}
+                        className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 ${isSaved ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-300'}`}
+                        aria-label={isSaved ? "Quitar de favoritos" : "Guardar en favoritos"}
+                    >
+                       <StarIcon filled={isSaved} />
+                    </button>
                     <button
                         onClick={onToggleLoop}
                         className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 font-mono font-bold text-sm ${isLooping ? 'bg-blue-600 text-white' : 'bg-gray-600/50 hover:bg-blue-800 text-gray-300'}`}
@@ -59,11 +70,12 @@ const TranslationItem: React.FC<TranslationItemProps> = ({ item, onPlay, onStop,
 };
 
 
-export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, isLoading, error }) => {
+export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, isLoading, error, onToggleSave, savedTranslations }) => {
     const { play, pause, stop, setSpeed, isPlaying, isPaused, currentText } = useTextToSpeech('fr-FR');
     const [speed, setSpeedValue] = useState(1);
     const [isGlobalLooping, setIsGlobalLooping] = useState(false);
     const [loopingItemIndex, setLoopingItemIndex] = useState<number | null>(null);
+    const savedOriginals = new Set(savedTranslations.map(t => t.original));
 
     useEffect(() => {
         setSpeed(speed);
@@ -174,6 +186,8 @@ export const TranslationOutput: React.FC<TranslationOutputProps> = ({ results, i
                                 onPlay={(text) => handlePlaySingle(text, index)}
                                 onStop={stop}
                                 onToggleLoop={() => handleToggleLoopSingle(index)}
+                                onToggleSave={onToggleSave}
+                                isSaved={savedOriginals.has(item.original)}
                                 isPlaying={isPlaying}
                                 isLooping={loopingItemIndex === index}
                                 currentText={currentText}
