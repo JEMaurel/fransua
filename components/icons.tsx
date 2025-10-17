@@ -93,3 +93,10 @@ export const ChevronIcon: React.FC<{ className?: string }> = ({ className }) => 
     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
   </svg>
 );
+
+export const SendIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-5 w-5"} viewBox="0 0 20 20" fill="currentColor">
+      <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428A1 1 0 0010 16.5v-13a1 1 0 00-.894-.997z" />
+      <path d="M10 16.5a1 1 0 00.725-.325l5-4.5a1 1 0 000-1.35l-5-4.5a1 1 0 00-.725 1.675L14.66 12l-4.66 4.175A1 1 0 0010 16.5z" />
+    </svg>
+);

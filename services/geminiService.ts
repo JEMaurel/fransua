@@ -160,3 +160,25 @@ export const translateText = async (text: string, fromLanguage: string, toLangua
         throw new Error("La solicitud de traducción simple a la API de Gemini falló.");
     }
 };
+
+export const modifyText = async (baseText: string, instruction: string) => {
+    const prompt = `Toma el siguiente texto base y modifícalo de acuerdo con la instrucción. Responde únicamente con el texto modificado, sin explicaciones ni texto adicional.
+
+Texto Base:
+"${baseText}"
+
+Instrucción:
+"${instruction}"
+`;
+
+    try {
+        const response = await model.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error en la modificación de texto de Gemini:", error);
+        throw new Error("La solicitud de modificación de texto a la API de Gemini falló.");
+    }
+};

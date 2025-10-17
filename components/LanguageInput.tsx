@@ -1,13 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { UploadIcon, SparklesIcon, TranslateIcon, MicrophoneIcon, ClearIcon, NewChatIcon } from './icons';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { UploadIcon, SparklesIcon, TranslateIcon, MicrophoneIcon, ClearIcon, NewChatIcon, SendIcon } from './icons';
 
 interface LanguageInputProps {
+  text: string;
+  onTextChange: (text: string) => void;
   onTranslate: (text: string) => void;
-  onGenerateAndTranslate: (theme?: string) => Promise<string>;
-  onImageUpload: (file: File) => Promise<string>;
+  onGenerateAndTranslate: (theme?: string) => Promise<void>;
+  onImageUpload: (file: File) => Promise<void>;
   onResetChat: () => void;
+  onModifyText: (baseText: string, instruction: string) => void;
   isLoading: boolean;
+  hasTranslation: boolean;
 }
+
+export interface LanguageInputRef {
+  focusAndSelect: () => void;
+}
+
 
 // Add SpeechRecognition types for cross-browser compatibility
 interface SpeechRecognition extends EventTarget {
@@ -33,13 +42,33 @@ declare global {
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 
-export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGenerateAndTranslate, onImageUpload, onResetChat, isLoading }) => {
-  const [text, setText] = useState('');
+export const LanguageInput = forwardRef<LanguageInputRef, LanguageInputProps>(({ 
+  text, 
+  onTextChange, 
+  onTranslate, 
+  onGenerateAndTranslate, 
+  onImageUpload, 
+  onResetChat, 
+  onModifyText,
+  isLoading, 
+  hasTranslation 
+}, ref) => {
   const [storyTheme, setStoryTheme] = useState('');
+  const [followUp, setFollowUp] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [speechError, setSpeechError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fix: Corrected typo in useImperativeHandle hook name.
+  useImperativeHandle(ref, () => ({
+    focusAndSelect: () => {
+      textareaRef.current?.focus();
+      textareaRef.current?.select();
+    }
+  }));
+
 
   // Check for browser support and cleanup on unmount
   useEffect(() => {
@@ -59,16 +88,15 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
   };
   
   const handleGenerateAndTranslateClick = async () => {
-    const story = await onGenerateAndTranslate(storyTheme || undefined);
-    setText(story);
+    await onGenerateAndTranslate(storyTheme || undefined);
+    setFollowUp('');
   };
 
   const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const extractedText = await onImageUpload(file);
-      setText(extractedText);
-      onTranslate(extractedText);
+      await onImageUpload(file);
+      setFollowUp('');
     }
   };
 
@@ -96,7 +124,7 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
     recognition.onstart = () => {
         setIsRecording(true);
         setSpeechError(null);
-        setText('');
+        onTextChange('');
         onTranslate(''); 
     };
 
@@ -109,7 +137,7 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
                 interimTranscript += event.results[i][0].transcript;
             }
         }
-        setText(finalTranscript + interimTranscript);
+        onTextChange(finalTranscript + interimTranscript);
     };
     
     recognition.onerror = (event) => {
@@ -124,6 +152,7 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
         setIsRecording(false);
         recognitionRef.current = null;
         if (finalTranscript.trim()) {
+          onTextChange(finalTranscript.trim());
           onTranslate(finalTranscript.trim());
         }
     };
@@ -133,13 +162,19 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
   };
   
   const handleClearClick = () => {
-    setText('');
+    onTextChange('');
     onTranslate('');
   };
 
   const handleNewChatClick = () => {
-    setText('');
     onResetChat();
+    setFollowUp('');
+  };
+
+  const handleFollowUpSubmit = () => {
+    if (!followUp.trim() || !text.trim()) return;
+    onModifyText(text, followUp);
+    setFollowUp('');
   };
 
   return (
@@ -147,7 +182,6 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
       <div className="flex justify-between items-start mb-2">
         <div>
           <h2 className="text-lg font-semibold text-white">Texto en Español</h2>
-          <p className="text-xs text-gray-400 mt-1">Consejo: Después de traducir, puedes pedir cambios como "cámbialo a futuro" o "usa un sinónimo para..."</p>
         </div>
          <button 
             onClick={handleNewChatClick}
@@ -161,12 +195,47 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
       </div>
       {speechError && <p className="text-red-400 text-sm mb-2">{speechError}</p>}
       <textarea
+        ref={textareaRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Escribe, habla, sube una imagen o pide un cambio en la traducción anterior..."
-        className="w-full flex-grow bg-gray-900/70 border border-gray-600 rounded-lg p-4 text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-300 resize-none min-h-[250px] text-base"
+        onChange={(e) => onTextChange(e.target.value)}
+        placeholder="Escribe, habla, sube una imagen o genera una historia..."
+        className="w-full flex-grow bg-gray-900/70 border border-gray-600 rounded-lg p-4 text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-300 resize-none min-h-[200px] text-base"
         disabled={isLoading}
       />
+
+      {hasTranslation && (
+        <div className="mt-4">
+          <label htmlFor="follow-up-input" className="block text-sm font-medium text-gray-400 mb-2">
+            Modificar Texto en Español
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="follow-up-input"
+              type="text"
+              value={followUp}
+              onChange={(e) => setFollowUp(e.target.value)}
+              placeholder="Ej: 'conjuga ese verbo' o 'hazlo más formal'"
+              className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-200 focus:ring-1 focus:ring-blue-500 focus:outline-none transition"
+              disabled={isLoading}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleFollowUpSubmit();
+                }
+              }}
+            />
+            <button
+              onClick={handleFollowUpSubmit}
+              disabled={isLoading || !followUp.trim() || !text.trim()}
+              className="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold p-2.5 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Modificar el texto en español"
+            >
+              <SendIcon />
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="mt-4 space-y-4">
          <div className="flex flex-col sm:flex-row items-center gap-3">
           <input
@@ -183,7 +252,7 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
           >
             <SparklesIcon />
-            Generar Historia y Traducir
+            Generar y Traducir
           </button>
         </div>
         <div className="flex items-center gap-3">
@@ -224,10 +293,10 @@ export const LanguageInput: React.FC<LanguageInputProps> = ({ onTranslate, onGen
                 className="w-full flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-all duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg transform hover:scale-105"
             >
                <TranslateIcon />
-               {isLoading ? 'Traduciendo...' : 'Traducir'}
+               {isLoading ? 'Procesando...' : 'Traducir'}
             </button>
         </div>
       </div>
     </div>
   );
-};
+});
