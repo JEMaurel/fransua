@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Chat } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
@@ -10,6 +11,7 @@ const ai = new GoogleGenAI({ apiKey: API_KEY });
 const model = ai.models;
 
 let chat: Chat | null = null;
+let dialogueChat: Chat | null = null;
 
 const translationSchema = {
     type: Type.ARRAY,
@@ -33,6 +35,26 @@ const translationSchema = {
     },
 };
 
+const dialogueSchema = {
+    type: Type.OBJECT,
+    properties: {
+        frenchResponse: {
+            type: Type.STRING,
+            description: "The AI's response in French to continue the conversation."
+        },
+        spanishTranslation: {
+            type: Type.STRING,
+            description: "The Spanish translation of the AI's French response."
+        },
+        suggestedUserResponse: {
+            type: Type.STRING,
+            description: "A simple, relevant French phrase that the user could say next."
+        }
+    },
+    required: ["frenchResponse", "spanishTranslation", "suggestedUserResponse"]
+};
+
+
 const startTranslationChat = () => {
     chat = ai.chats.create({
         model: 'gemini-2.5-flash',
@@ -44,6 +66,49 @@ const startTranslationChat = () => {
 - Mantén el contexto de la conversación para permitir traducciones iterativas.`,
         },
     });
+};
+
+const startDialogueChat = () => {
+    dialogueChat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: `Eres un amigable tutor de francés que mantiene una conversación sencilla con un estudiante de español.
+- Tu objetivo es ayudar al usuario a practicar su habla.
+- Inicia la conversación con un saludo simple.
+- Mantén tus respuestas cortas y sencillas (1 o 2 frases).
+- Después de cada respuesta tuya, sugiere una posible respuesta para el usuario.
+- Siempre responde en formato JSON que se ajuste al esquema proporcionado.
+- Si el usuario dice algo que no entiendes o que no tiene sentido, responde amablemente que no entendiste y haz una pregunta para volver a encarrilar la conversación. Por ejemplo: "Pardon, je n'ai pas compris. Pourriez-vous répéter ?" (Perdón, no entendí. ¿Podrías repetir?).`,
+        },
+    });
+};
+
+export const continueDialogue = async (userMessage?: string) => {
+    if (!dialogueChat) {
+        startDialogueChat();
+    }
+
+    const prompt = userMessage
+        ? `El usuario respondió: "${userMessage}". Continúa la conversación.`
+        : "Inicia la conversación con un saludo.";
+
+    try {
+        if (!dialogueChat) throw new Error("El chat de diálogo no está inicializado.");
+        
+        const response = await dialogueChat.sendMessage({
+            message: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: dialogueSchema,
+            }
+        });
+
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (error) {
+        console.error("Error en el diálogo de Gemini:", error);
+        throw new Error("La solicitud de diálogo a la API de Gemini falló.");
+    }
 };
 
 export const translateWithChat = async (text: string) => {
@@ -77,6 +142,10 @@ Texto: "${text}"`;
 
 export const resetChat = () => {
     chat = null;
+};
+
+export const resetDialogueChat = () => {
+    dialogueChat = null;
 };
 
 

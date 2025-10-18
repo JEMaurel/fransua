@@ -7,7 +7,7 @@ import { TranslationOutput } from './components/TranslationOutput';
 import { SpeechPractice } from './components/SpeechPractice';
 import { SavedTranslations } from './components/SavedTranslations';
 import { TranslationUnit } from './types';
-import { translateWithChat, generateStory, getTextFromImage, resetChat, modifyText } from './services/geminiService';
+import { translateWithChat, generateStory, getTextFromImage, resetChat, modifyText, resetDialogueChat } from './services/geminiService';
 import { LogoIcon } from './components/icons';
 
 const App: React.FC = () => {
@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState('');
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const languageInputRef = useRef<LanguageInputRef>(null);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ const App: React.FC = () => {
   
   const handleResetChat = useCallback(() => {
     resetChat();
+    resetDialogueChat();
     setTranslationResult([]);
     setText('');
     setError(null);
@@ -148,51 +150,61 @@ const App: React.FC = () => {
       return newSaved;
     });
   }, []);
+  
+  const handleToggleFocusMode = useCallback(() => {
+    setIsFocusMode(prev => !prev);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-gray-200 font-sans p-4 sm:p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-3">
-            <LogoIcon />
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Traductor AI Francés</h1>
-          </div>
-          <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">
-            Powered by Gemini
-          </a>
-        </header>
+    <div className={`min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-gray-200 font-sans p-4 sm:p-6 md:p-8 ${isFocusMode ? 'flex flex-col' : ''}`}>
+      <div className={`max-w-7xl mx-auto w-full ${isFocusMode ? 'flex-grow flex flex-col' : ''}`}>
+        {!isFocusMode && (
+          <header className="flex items-center justify-between mb-8">
+            <div className="flex items-center space-x-3">
+              <LogoIcon />
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Traductor AI Francés</h1>
+            </div>
+            <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">
+              Powered by Gemini
+            </a>
+          </header>
+        )}
 
-        <main className="space-y-12">
-          <div className={`grid grid-cols-1 ${translationResult.length > 0 || savedTranslations.length > 0 ? 'lg:grid-cols-[2fr_3fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
-            <LanguageInput
-              ref={languageInputRef}
-              text={text}
-              onTextChange={setText}
-              onTranslate={handleTranslate}
-              onGenerateAndTranslate={handleGenerateAndTranslate}
-              onImageUpload={handleImageUpload}
-              onResetChat={handleResetChat}
-              onModifyText={handleModifyText}
-              isLoading={isLoading}
-              hasTranslation={translationResult.length > 0}
-            />
-            <TranslationOutput
-              results={translationResult}
-              isLoading={isLoading}
-              error={error}
-              onToggleSave={handleToggleSave}
-              savedTranslations={savedTranslations}
-            />
-          </div>
-          {savedTranslations.length > 0 && (
-            <SavedTranslations
-              items={savedTranslations}
-              onRemove={handleToggleSave}
-              isExpanded={isSavedExpanded}
-              onToggleExpand={() => setIsSavedExpanded(!isSavedExpanded)}
-            />
-          )}
-          <SpeechPractice />
+        <main className={` ${isFocusMode ? 'flex-grow flex flex-col' : 'space-y-12'}`}>
+           {!isFocusMode && (
+             <>
+              <div className={`grid grid-cols-1 ${translationResult.length > 0 || savedTranslations.length > 0 ? 'lg:grid-cols-[2fr_3fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
+                <LanguageInput
+                  ref={languageInputRef}
+                  text={text}
+                  onTextChange={setText}
+                  onTranslate={handleTranslate}
+                  onGenerateAndTranslate={handleGenerateAndTranslate}
+                  onImageUpload={handleImageUpload}
+                  onResetChat={handleResetChat}
+                  onModifyText={handleModifyText}
+                  isLoading={isLoading}
+                  hasTranslation={translationResult.length > 0}
+                />
+                <TranslationOutput
+                  results={translationResult}
+                  isLoading={isLoading}
+                  error={error}
+                  onToggleSave={handleToggleSave}
+                  savedTranslations={savedTranslations}
+                />
+              </div>
+              {savedTranslations.length > 0 && (
+                <SavedTranslations
+                  items={savedTranslations}
+                  onRemove={handleToggleSave}
+                  isExpanded={isSavedExpanded}
+                  onToggleExpand={() => setIsSavedExpanded(!isSavedExpanded)}
+                />
+              )}
+            </>
+           )}
+          <SpeechPractice isFocusMode={isFocusMode} onToggleFocus={handleToggleFocusMode} />
         </main>
       </div>
     </div>
