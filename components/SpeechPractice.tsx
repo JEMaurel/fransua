@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { continueDialogue, translateText, resetDialogueChat } from '../services/geminiService';
-import { MicrophoneIcon, VolumeIcon, SendIcon, ExpandIcon, CollapseIcon, ChatBubbleIcon } from './icons';
+import { MicrophoneIcon, VolumeIcon, SendIcon, ChatBubbleIcon, BackArrowIcon } from './icons';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 // Type definitions for the Web Speech API
@@ -35,16 +35,21 @@ interface DialogueTurn {
     spanish: string;
 }
 
-interface SpeechPracticeProps {
-    isFocusMode: boolean;
-    onToggleFocus: () => void;
+interface SuggestedResponse {
+    french: string;
+    spanish: string;
+    pronunciation: string;
 }
 
-export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ isFocusMode, onToggleFocus }) => {
+interface SpeechPracticeProps {
+    onClose: () => void;
+}
+
+export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ onClose }) => {
     const [conversation, setConversation] = useState<DialogueTurn[]>([]);
     const [isRecording, setIsRecording] = useState(false);
     const [isAiTurn, setIsAiTurn] = useState(false);
-    const [currentSuggestedResponse, setCurrentSuggestedResponse] = useState<string | null>(null);
+    const [suggestedResponseDetails, setSuggestedResponseDetails] = useState<SuggestedResponse | null>(null);
     const [isSuggestionHighlighted, setIsSuggestionHighlighted] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +73,7 @@ export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ isFocusMode, onT
 
     const startConversation = useCallback(async () => {
         setConversation([]);
-        setCurrentSuggestedResponse(null);
+        setSuggestedResponseDetails(null);
         setError(null);
         setIsAiTurn(true);
         setIsSuggestionHighlighted(false);
@@ -76,7 +81,7 @@ export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ isFocusMode, onT
             const response = await continueDialogue();
             const newTurn: DialogueTurn = { speaker: 'ai', french: response.frenchResponse, spanish: response.spanishTranslation };
             setConversation([newTurn]);
-            setCurrentSuggestedResponse(response.suggestedUserResponse);
+            setSuggestedResponseDetails(response.suggestedUserResponseDetails);
             play({ text: response.frenchResponse, onEnd: () => setIsAiTurn(false) });
         } catch (err) {
             setError('No se pudo iniciar la conversación. Inténtelo de nuevo.');
@@ -84,28 +89,35 @@ export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ isFocusMode, onT
         }
     }, [play]);
 
-    const processUserSpeech = useCallback(async (transcript: string) => {
+    const processUserSpeech = useCallback(async (userInput: string | { french: string; spanish: string; }) => {
         setIsAiTurn(true);
         setIsSuggestionHighlighted(false);
-        setCurrentSuggestedResponse(null);
+        setSuggestedResponseDetails(null);
 
-        // Add user turn optimistically
-        const userTurn: DialogueTurn = { speaker: 'user', french: transcript, spanish: 'Traduciendo...' };
+        const isSuggestion = typeof userInput !== 'string';
+        const userFrench = isSuggestion ? userInput.french : userInput;
+        const userSpanish = isSuggestion ? userInput.spanish : 'Traduciendo...';
+        
+        const userTurn: DialogueTurn = { speaker: 'user', french: userFrench, spanish: userSpanish };
         setConversation(prev => [...prev, userTurn]);
         
         try {
-            const [spanishTranslation, aiResponse] = await Promise.all([
-                translateText(transcript, 'Francés', 'Español'),
-                continueDialogue(transcript)
-            ]);
+            // Only call for translation if it's a raw transcript
+            const finalSpanish = isSuggestion 
+                ? userSpanish 
+                : await translateText(userFrench, 'Francés', 'Español');
 
-            // Update user turn with translation
-            setConversation(prev => prev.map(turn => turn === userTurn ? { ...turn, spanish: spanishTranslation } : turn));
+            // Update user turn with translation if it wasn't a suggestion
+            if (!isSuggestion) {
+                 setConversation(prev => prev.map(turn => turn === userTurn ? { ...turn, spanish: finalSpanish } : turn));
+            }
+
+            const aiResponse = await continueDialogue(userFrench);
             
             // Add AI response
             const aiTurn: DialogueTurn = { speaker: 'ai', french: aiResponse.frenchResponse, spanish: aiResponse.spanishTranslation };
             setConversation(prev => [...prev, aiTurn]);
-            setCurrentSuggestedResponse(aiResponse.suggestedUserResponse);
+            setSuggestedResponseDetails(aiResponse.suggestedUserResponseDetails);
 
             play({ text: aiResponse.frenchResponse, onEnd: () => setIsAiTurn(false) });
 
@@ -155,43 +167,47 @@ export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ isFocusMode, onT
     };
     
     const handleUseSuggestion = () => {
-        if (currentSuggestedResponse) {
-            processUserSpeech(currentSuggestedResponse);
+        if (suggestedResponseDetails) {
+            processUserSpeech({
+                french: suggestedResponseDetails.french,
+                spanish: suggestedResponseDetails.spanish,
+            });
         }
     };
 
     return (
-        <div className={`bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700/50 mt-8 flex flex-col ${isFocusMode ? 'flex-grow h-full' : 'min-h-[400px]'} p-6`}>
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-white">Práctica de Diálogo</h2>
-                <button 
-                    onClick={onToggleFocus}
-                    className="p-2 rounded-full text-gray-400 bg-gray-700/60 hover:bg-gray-700 transition-colors"
-                    aria-label={isFocusMode ? 'Salir del modo enfoque' : 'Entrar al modo enfoque'}
+        <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-black z-50 p-4 sm:p-6 md:p-8 flex flex-col">
+            <header className="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Práctica de Diálogo</h2>
+                <button
+                    onClick={onClose}
+                    className="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                    aria-label="Volver al traductor"
                 >
-                    {isFocusMode ? <CollapseIcon /> : <ExpandIcon />}
+                    <BackArrowIcon />
+                    <span>Volver</span>
                 </button>
-            </div>
+            </header>
             
             <div className="flex-grow overflow-y-auto pr-2 space-y-4">
                 {conversation.length === 0 && !isAiTurn && (
                     <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-                         <ChatBubbleIcon />
-                        <p className="mt-2">Entabla una conversación con la IA para mejorar tu fluidez.</p>
-                        <button onClick={startConversation} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                         <ChatBubbleIcon className="h-24 w-24" />
+                        <p className="mt-4 text-lg">Entabla una conversación con la IA para mejorar tu fluidez.</p>
+                        <button onClick={startConversation} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors text-lg">
                             Iniciar Diálogo
                         </button>
                     </div>
                 )}
                 {conversation.map((turn, index) => (
                     <div key={index} className={`flex ${turn.speaker === 'ai' ? 'justify-start' : 'justify-end'}`}>
-                        <div className={`relative group max-w-md md:max-w-lg rounded-xl px-4 py-2 ${turn.speaker === 'ai' ? 'bg-gray-700 rounded-bl-none' : 'bg-blue-800 rounded-br-none'}`}>
-                            <p className="font-semibold text-white pr-8">{turn.french}</p>
-                            <p className="text-xs text-gray-300/80 italic mt-1">{turn.spanish}</p>
+                        <div className={`relative group max-w-md md:max-w-lg rounded-xl px-4 py-3 ${turn.speaker === 'ai' ? 'bg-gray-700 rounded-bl-none' : 'bg-blue-800 rounded-br-none'}`}>
+                            <p className="font-semibold text-white pr-8 text-base">{turn.french}</p>
+                            <p className="text-sm text-gray-300/80 italic mt-1">{turn.spanish}</p>
                              <button 
                                 onClick={() => play(turn.french)} 
                                 disabled={isPlaying}
-                                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition-all duration-200 opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-20 disabled:hover:bg-black/20"
+                                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition-all duration-200"
                                 aria-label="Escuchar de nuevo"
                             >
                                 <VolumeIcon className="w-4 h-4" />
@@ -214,16 +230,27 @@ export const SpeechPractice: React.FC<SpeechPracticeProps> = ({ isFocusMode, onT
             </div>
 
             {conversation.length > 0 && (
-                <div className="pt-4 mt-4 border-t border-gray-700/50 space-y-4">
-                    {currentSuggestedResponse && !isAiTurn && (
-                        <div className={`bg-gray-900/70 p-3 rounded-lg border transition-all ${isSuggestionHighlighted ? 'border-yellow-400 shadow-lg shadow-yellow-400/10' : 'border-gray-600'}`}>
-                            <p className="text-xs text-gray-400 mb-2">Sugerencia de la IA:</p>
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                                <p className="italic text-gray-200 text-center sm:text-left">"{currentSuggestedResponse}"</p>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button onClick={() => play(currentSuggestedResponse)} disabled={isPlaying} className="p-2 rounded-full hover:bg-gray-600 transition-colors"><VolumeIcon /></button>
-                                    <button onClick={handleUseSuggestion} className="flex items-center gap-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-md transition-colors"><SendIcon className="w-4 h-4" /> Usar</button>
+                <div className="pt-4 mt-4 border-t border-gray-700/50 space-y-4 flex-shrink-0">
+                    {suggestedResponseDetails && !isAiTurn && (
+                        <div className={`bg-gray-900/50 p-4 rounded-lg border transition-all ${isSuggestionHighlighted ? 'border-yellow-400 shadow-lg shadow-yellow-400/10' : 'border-gray-600'}`}>
+                            <p className="text-sm text-gray-400 mb-3 text-center">Sugerencia de la IA:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start text-center">
+                                <div className="p-3 bg-gray-800/70 rounded-lg">
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider">Francés</p>
+                                    <p className="font-semibold text-blue-300 text-xl lg:text-2xl mt-1">"{suggestedResponseDetails.french}"</p>
                                 </div>
+                                <div className="p-3 bg-gray-800/70 rounded-lg">
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider">Español</p>
+                                    <p className="text-gray-200 text-xl lg:text-2xl mt-1">"{suggestedResponseDetails.spanish}"</p>
+                                </div>
+                                <div className="p-3 bg-gray-800/70 rounded-lg">
+                                    <p className="text-xs text-gray-400 uppercase tracking-wider">Fonética</p>
+                                    <p className="text-gray-400 italic text-xl lg:text-2xl mt-1">({suggestedResponseDetails.pronunciation})</p>
+                                </div>
+                            </div>
+                            <div className="flex justify-center items-center gap-4 mt-4">
+                                <button onClick={() => play(suggestedResponseDetails.french)} disabled={isPlaying} className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors" aria-label="Escuchar sugerencia"><VolumeIcon className="w-6 h-6" /></button>
+                                <button onClick={handleUseSuggestion} className="flex items-center gap-2 text-base bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors"><SendIcon className="w-5 h-5" /> Usar</button>
                             </div>
                         </div>
                     )}

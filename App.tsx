@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 // FIX: Changed from named import `{ LanguageInput }` to default import `LanguageInput`.
 import LanguageInput from './components/LanguageInput';
@@ -8,7 +7,7 @@ import { SpeechPractice } from './components/SpeechPractice';
 import { SavedTranslations } from './components/SavedTranslations';
 import { TranslationUnit } from './types';
 import { translateWithChat, generateStory, getTextFromImage, resetChat, modifyText, resetDialogueChat } from './services/geminiService';
-import { LogoIcon } from './components/icons';
+import { LogoIcon, ChatBubbleIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [translationResult, setTranslationResult] = useState<TranslationUnit[]>([]);
@@ -17,7 +16,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState('');
-  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isDialogueVisible, setIsDialogueVisible] = useState(false);
   const languageInputRef = useRef<LanguageInputRef>(null);
 
   useEffect(() => {
@@ -150,15 +149,11 @@ const App: React.FC = () => {
       return newSaved;
     });
   }, []);
-  
-  const handleToggleFocusMode = useCallback(() => {
-    setIsFocusMode(prev => !prev);
-  }, []);
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-gray-200 font-sans p-4 sm:p-6 md:p-8 ${isFocusMode ? 'flex flex-col' : ''}`}>
-      <div className={`max-w-7xl mx-auto w-full ${isFocusMode ? 'flex-grow flex flex-col' : ''}`}>
-        {!isFocusMode && (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-gray-200 font-sans">
+      <div className={isDialogueVisible ? 'hidden' : 'p-4 sm:p-6 md:p-8'}>
+        <div className="max-w-7xl mx-auto w-full">
           <header className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
               <LogoIcon />
@@ -168,11 +163,8 @@ const App: React.FC = () => {
               Powered by Gemini
             </a>
           </header>
-        )}
 
-        <main className={` ${isFocusMode ? 'flex-grow flex flex-col' : 'space-y-12'}`}>
-           {!isFocusMode && (
-             <>
+          <main className="space-y-12">
               <div className={`grid grid-cols-1 ${translationResult.length > 0 || savedTranslations.length > 0 ? 'lg:grid-cols-[2fr_3fr]' : 'lg:grid-cols-2'} gap-8 transition-all duration-500`}>
                 <LanguageInput
                   ref={languageInputRef}
@@ -202,11 +194,24 @@ const App: React.FC = () => {
                   onToggleExpand={() => setIsSavedExpanded(!isSavedExpanded)}
                 />
               )}
-            </>
-           )}
-          <SpeechPractice isFocusMode={isFocusMode} onToggleFocus={handleToggleFocusMode} />
-        </main>
+
+              <div className="border-t border-gray-700/50 pt-8 flex justify-center">
+                <button
+                  onClick={() => setIsDialogueVisible(true)}
+                  className="inline-flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg hover:shadow-indigo-500/50"
+                  aria-expanded={isDialogueVisible}
+                >
+                  <ChatBubbleIcon className="h-6 w-6" />
+                  <span>Iniciar Práctica de Diálogo</span>
+                </button>
+              </div>
+          </main>
+        </div>
       </div>
+      
+      {isDialogueVisible && (
+        <SpeechPractice onClose={() => setIsDialogueVisible(false)} />
+      )}
     </div>
   );
 };

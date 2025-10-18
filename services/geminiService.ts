@@ -46,12 +46,27 @@ const dialogueSchema = {
             type: Type.STRING,
             description: "The Spanish translation of the AI's French response."
         },
-        suggestedUserResponse: {
-            type: Type.STRING,
-            description: "A simple, relevant French phrase that the user could say next."
+        suggestedUserResponseDetails: {
+            type: Type.OBJECT,
+            description: "Details for a suggested response the user could say next.",
+            properties: {
+                french: {
+                    type: Type.STRING,
+                    description: "The suggested response in French."
+                },
+                spanish: {
+                    type: Type.STRING,
+                    description: "The Spanish translation of the suggested response."
+                },
+                pronunciation: {
+                    type: Type.STRING,
+                    description: "A simple phonetic guide for the suggested French response."
+                }
+            },
+            required: ["french", "spanish", "pronunciation"]
         }
     },
-    required: ["frenchResponse", "spanishTranslation", "suggestedUserResponse"]
+    required: ["frenchResponse", "spanishTranslation", "suggestedUserResponseDetails"]
 };
 
 
@@ -76,7 +91,7 @@ const startDialogueChat = () => {
 - Tu objetivo es ayudar al usuario a practicar su habla.
 - Inicia la conversación con un saludo simple.
 - Mantén tus respuestas cortas y sencillas (1 o 2 frases).
-- Después de cada respuesta tuya, sugiere una posible respuesta para el usuario.
+- Después de cada respuesta tuya, sugiere una posible respuesta para el usuario, incluyendo su traducción al español y una guía fonética.
 - Siempre responde en formato JSON que se ajuste al esquema proporcionado.
 - Si el usuario dice algo que no entiendes o que no tiene sentido, responde amablemente que no entendiste y haz una pregunta para volver a encarrilar la conversación. Por ejemplo: "Pardon, je n'ai pas compris. Pourriez-vous répéter ?" (Perdón, no entendí. ¿Podrías repetir?).`,
         },
