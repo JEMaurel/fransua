@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Chat } from "@google/genai";
 
 const API_KEY = process.env.API_KEY;
@@ -12,6 +11,7 @@ const model = ai.models;
 
 let chat: Chat | null = null;
 let dialogueChat: Chat | null = null;
+let fluentDialogueChat: Chat | null = null;
 
 const translationSchema = {
     type: Type.ARRAY,
@@ -69,6 +69,21 @@ const dialogueSchema = {
     required: ["frenchResponse", "spanishTranslation", "suggestedUserResponseDetails"]
 };
 
+const fluentDialogueSchema = {
+    type: Type.OBJECT,
+    properties: {
+        frenchResponse: {
+            type: Type.STRING,
+            description: "The AI's response in French to continue the conversation."
+        },
+        spanishTranslation: {
+            type: Type.STRING,
+            description: "The Spanish translation of the AI's French response."
+        }
+    },
+    required: ["frenchResponse", "spanishTranslation"]
+};
+
 
 const startTranslationChat = () => {
     chat = ai.chats.create({
@@ -102,6 +117,17 @@ const startDialogueChat = () => {
     });
 };
 
+const startFluentDialogueChat = () => {
+    fluentDialogueChat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: `Eres un tutor de francés conversacional. Tu objetivo es mantener una conversación fluida y natural con el usuario en francés. El usuario está tratando de practicar. Mantén tus respuestas conversacionales y no demasiado largas. No des sugerencias, solo responde de forma natural. Responde siempre en formato JSON con dos claves: 'frenchResponse' (tu respuesta en francés) y 'spanishTranslation' (la traducción de tu respuesta al español).`,
+            responseMimeType: "application/json",
+            responseSchema: fluentDialogueSchema,
+        },
+    });
+};
+
 export const continueDialogue = async (userMessage?: string) => {
     if (!dialogueChat) {
         startDialogueChat();
@@ -125,6 +151,31 @@ export const continueDialogue = async (userMessage?: string) => {
         throw new Error("La solicitud de diálogo a la API de Gemini falló.");
     }
 };
+
+export const continueFluentDialogue = async (userMessage?: string) => {
+    if (!fluentDialogueChat) {
+        startFluentDialogueChat();
+    }
+
+    const prompt = userMessage
+        ? `El usuario respondió: "${userMessage}". Continúa la conversación.`
+        : "Inicia la conversación con un saludo.";
+
+    try {
+        if (!fluentDialogueChat) throw new Error("El chat de diálogo fluido no está inicializado.");
+        
+        const response = await fluentDialogueChat.sendMessage({
+            message: prompt,
+        });
+
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (error) {
+        console.error("Error en el diálogo fluido de Gemini:", error);
+        throw new Error("La solicitud de diálogo fluido a la API de Gemini falló.");
+    }
+};
+
 
 export const translateWithChat = async (text: string) => {
     if (!chat) {
@@ -157,6 +208,7 @@ export const resetChat = () => {
 
 export const resetDialogueChat = () => {
     dialogueChat = null;
+    fluentDialogueChat = null; // Also reset fluent chat
 };
 
 

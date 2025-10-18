@@ -3,30 +3,7 @@ import { continueDialogue, translateText, resetDialogueChat } from '../services/
 import { MicrophoneIcon, VolumeIcon, SendIcon, ChatBubbleIcon, BackArrowIcon } from './icons';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
-// Type definitions for the Web Speech API
-interface SpeechRecognition extends EventTarget {
-    lang: string;
-    interimResults: boolean;
-    continuous: boolean;
-    onstart: (() => void) | null;
-    onresult: ((event: any) => void) | null;
-    onerror: ((event: any) => void) | null;
-    onend: (() => void) | null;
-    start: () => void;
-    stop: () => void;
-}
-
-interface SpeechRecognitionStatic {
-    new(): SpeechRecognition;
-}
-
-declare global {
-    interface Window {
-        SpeechRecognition: SpeechRecognitionStatic;
-        webkitSpeechRecognition: SpeechRecognitionStatic;
-    }
-}
-
+// FIX: Removed duplicate SpeechRecognition type declarations. These are now defined in FluentDialogue.tsx to avoid conflicts.
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 interface DialogueTurn {

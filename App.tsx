@@ -4,6 +4,7 @@ import LanguageInput from './components/LanguageInput';
 import type { LanguageInputRef } from './components/LanguageInput';
 import { TranslationOutput } from './components/TranslationOutput';
 import { SpeechPractice } from './components/SpeechPractice';
+import { FluentDialogue } from './components/FluentDialogue';
 import { SavedTranslations } from './components/SavedTranslations';
 import { TranslationUnit } from './types';
 import { translateWithChat, generateStory, getTextFromImage, resetChat, modifyText, resetDialogueChat } from './services/geminiService';
@@ -17,6 +18,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [isDialogueVisible, setIsDialogueVisible] = useState(false);
+  const [isFluentDialogueVisible, setIsFluentDialogueVisible] = useState(false);
   const languageInputRef = useRef<LanguageInputRef>(null);
 
   useEffect(() => {
@@ -152,7 +154,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-gray-200 font-sans">
-      <div className={isDialogueVisible ? 'hidden' : 'p-4 sm:p-6 md:p-8'}>
+      <div className={isDialogueVisible || isFluentDialogueVisible ? 'hidden' : 'p-4 sm:p-6 md:p-8'}>
         <div className="max-w-7xl mx-auto w-full">
           <header className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
@@ -195,14 +197,22 @@ const App: React.FC = () => {
                 />
               )}
 
-              <div className="border-t border-gray-700/50 pt-8 flex justify-center">
+              <div className="border-t border-gray-700/50 pt-8 flex justify-center flex-wrap gap-4">
                 <button
                   onClick={() => setIsDialogueVisible(true)}
                   className="inline-flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg hover:shadow-indigo-500/50"
                   aria-expanded={isDialogueVisible}
                 >
                   <ChatBubbleIcon className="h-6 w-6" />
-                  <span>Iniciar Práctica de Diálogo</span>
+                  <span>Práctica de Diálogo</span>
+                </button>
+                 <button
+                  onClick={() => setIsFluentDialogueVisible(true)}
+                  className="inline-flex items-center gap-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg hover:shadow-teal-500/50"
+                  aria-expanded={isFluentDialogueVisible}
+                >
+                  <ChatBubbleIcon className="h-6 w-6" />
+                  <span>Diálogo Fluido</span>
                 </button>
               </div>
           </main>
@@ -211,6 +221,9 @@ const App: React.FC = () => {
       
       {isDialogueVisible && (
         <SpeechPractice onClose={() => setIsDialogueVisible(false)} />
+      )}
+      {isFluentDialogueVisible && (
+        <FluentDialogue onClose={() => setIsFluentDialogueVisible(false)} />
       )}
     </div>
   );
