@@ -1,5 +1,7 @@
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { LanguageInput } from './components/LanguageInput';
+// FIX: Changed from named import `{ LanguageInput }` to default import `LanguageInput`.
+import LanguageInput from './components/LanguageInput';
 import type { LanguageInputRef } from './components/LanguageInput';
 import { TranslationOutput } from './components/TranslationOutput';
 import { SpeechPractice } from './components/SpeechPractice';

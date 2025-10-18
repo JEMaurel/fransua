@@ -17,7 +17,6 @@ export interface LanguageInputRef {
   focusAndSelect: () => void;
 }
 
-
 // Add SpeechRecognition types for cross-browser compatibility
 interface SpeechRecognition extends EventTarget {
     lang: string;
@@ -41,262 +40,189 @@ declare global {
 }
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+const beepSound = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU0AAAAAAAA/D/4//z8//wEACQEF//8A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/QD+AP0A/gD9AP4A/QD+AP0A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/gD9AP4A/";
 
-export const LanguageInput = forwardRef<LanguageInputRef, LanguageInputProps>(({ 
-  text, 
-  onTextChange, 
-  onTranslate, 
-  onGenerateAndTranslate, 
-  onImageUpload, 
-  onResetChat, 
-  onModifyText,
-  isLoading, 
-  hasTranslation 
-}, ref) => {
-  const [storyTheme, setStoryTheme] = useState('');
-  const [followUp, setFollowUp] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const [speechError, setSpeechError] = useState<string | null>(null);
+const LanguageInputComponent: React.ForwardRefRenderFunction<LanguageInputRef, LanguageInputProps> = (
+  { text, onTextChange, onTranslate, onGenerateAndTranslate, onImageUpload, onResetChat, onModifyText, isLoading, hasTranslation },
+  ref
+) => {
+  const [theme, setTheme] = useState('');
+  const [modifyInstruction, setModifyInstruction] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [isModifyListening, setIsModifyListening] = useState(false);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const modifyRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fix: Corrected typo in useImperativeHandle hook name.
+  useEffect(() => {
+    // Auto-focus the textarea when the component mounts
+    textareaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    beepAudioRef.current = new Audio(beepSound);
+  }, []);
+
   useImperativeHandle(ref, () => ({
     focusAndSelect: () => {
       textareaRef.current?.focus();
       textareaRef.current?.select();
-    }
+    },
   }));
 
-
-  // Check for browser support and cleanup on unmount
   useEffect(() => {
-    if (!SpeechRecognition) {
-      setSpeechError('El reconocimiento de voz no es compatible con este navegador.');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-    };
-  }, []);
+  }, [text]);
 
-  const handleTranslateClick = () => {
-    onTranslate(text);
-  };
-  
-  const handleGenerateAndTranslateClick = async () => {
-    await onGenerateAndTranslate(storyTheme || undefined);
-    setFollowUp('');
-  };
-
-  const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      await onImageUpload(file);
-      setFollowUp('');
+  const handleToggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
     }
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleToggleRecording = () => {
-    if (isRecording) {
-        recognitionRef.current?.stop();
-        return;
-    }
-
-    if (!SpeechRecognition) {
-        return; // Error is already set by useEffect
-    }
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'es-ES';
     recognition.interimResults = true;
-    recognition.continuous = true; // Allow for pauses
-
-    let finalTranscript = '';
-
-    recognition.onstart = () => {
-        setIsRecording(true);
-        setSpeechError(null);
-        onTextChange('');
-        onTranslate(''); 
-    };
-
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
     recognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-            } else {
-                interimTranscript += event.results[i][0].transcript;
-            }
-        }
-        onTextChange(finalTranscript + interimTranscript);
+      onTextChange(Array.from(event.results).map(r => r[0].transcript).join(''));
     };
-    
-    recognition.onerror = (event) => {
-        if (event.error !== 'aborted' && event.error !== 'no-speech') {
-            setSpeechError(`Error de reconocimiento: ${event.error}`);
-        }
-        setIsRecording(false);
-        recognitionRef.current = null;
-    };
-
-    recognition.onend = () => {
-        setIsRecording(false);
-        recognitionRef.current = null;
-        if (finalTranscript.trim()) {
-          onTextChange(finalTranscript.trim());
-          onTranslate(finalTranscript.trim());
-        }
-    };
-    
-    recognitionRef.current = recognition;
     recognition.start();
+    recognitionRef.current = recognition;
+  };
+
+  const handleToggleModifyListening = () => {
+    if (isModifyListening) {
+      modifyRecognitionRef.current?.stop();
+      return;
+    }
+
+    if (!SpeechRecognition) return;
+
+    beepAudioRef.current?.play();
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = true;
+    recognition.onstart = () => setIsModifyListening(true);
+    recognition.onend = () => setIsModifyListening(false);
+    recognition.onresult = (event) => {
+      setModifyInstruction(Array.from(event.results).map(r => r[0].transcript).join(''));
+    };
+    recognition.start();
+    modifyRecognitionRef.current = recognition;
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      onImageUpload(e.target.files[0]);
+    }
+  };
+
+  const handleTranslateClick = () => onTranslate(text);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleTranslateClick();
+    }
   };
   
-  const handleClearClick = () => {
-    onTextChange('');
-    onTranslate('');
-  };
-
-  const handleNewChatClick = () => {
-    onResetChat();
-    setFollowUp('');
-  };
-
-  const handleFollowUpSubmit = () => {
-    if (!followUp.trim() || !text.trim()) return;
-    onModifyText(text, followUp);
-    setFollowUp('');
-  };
+  const handleModify = () => {
+    if(text && modifyInstruction) {
+        onModifyText(text, modifyInstruction);
+        setModifyInstruction('');
+    }
+  }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 flex flex-col h-full">
-      <div className="flex justify-between items-start mb-2">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Texto en Español</h2>
-        </div>
-         <button 
-            onClick={handleNewChatClick}
-            disabled={isLoading}
-            className="flex-shrink-0 flex items-center gap-2 text-sm text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Empezar una nueva conversación de traducción"
-          >
-            <NewChatIcon />
-            Nuevo Chat
-          </button>
-      </div>
-      {speechError && <p className="text-red-400 text-sm mb-2">{speechError}</p>}
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => onTextChange(e.target.value)}
-        placeholder="Escribe, habla, sube una imagen o genera una historia..."
-        className="w-full flex-grow bg-gray-900/70 border border-gray-600 rounded-lg p-4 text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-300 resize-none min-h-[200px] text-base"
-        disabled={isLoading}
-      />
-
-      {hasTranslation && (
-        <div className="mt-4">
-          <label htmlFor="follow-up-input" className="block text-sm font-medium text-gray-400 mb-2">
-            Modificar Texto en Español
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              id="follow-up-input"
-              type="text"
-              value={followUp}
-              onChange={(e) => setFollowUp(e.target.value)}
-              placeholder="Ej: 'conjuga ese verbo' o 'hazlo más formal'"
-              className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-200 focus:ring-1 focus:ring-blue-500 focus:outline-none transition"
-              disabled={isLoading}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleFollowUpSubmit();
-                }
-              }}
-            />
-            <button
-              onClick={handleFollowUpSubmit}
-              disabled={isLoading || !followUp.trim() || !text.trim()}
-              className="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold p-2.5 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Modificar el texto en español"
-            >
-              <SendIcon />
-            </button>
-          </div>
-        </div>
-      )}
-      
-      <div className="mt-4 space-y-4">
-         <div className="flex flex-col sm:flex-row items-center gap-3">
-          <input
-            type="text"
-            value={storyTheme}
-            onChange={(e) => setStoryTheme(e.target.value)}
-            placeholder="Tema opcional (ej. en un café)"
-            className="w-full sm:w-auto flex-grow bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-gray-200 focus:ring-1 focus:ring-blue-500 focus:outline-none transition"
-            disabled={isLoading}
-          />
-          <button 
-            onClick={handleGenerateAndTranslateClick}
-            disabled={isLoading}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
-          >
-            <SparklesIcon />
-            Generar y Traducir
-          </button>
-        </div>
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 flex flex-col h-full space-y-4">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-            <button 
-                onClick={handleUploadClick}
+          <h2 className="text-lg font-semibold text-white">Texto en Español</h2>
+          <button 
+            onClick={() => imageInputRef.current?.click()} 
+            disabled={isLoading} 
+            className="p-2 rounded-full text-gray-400 bg-gray-700/60 hover:bg-gray-700 transition-colors disabled:opacity-50" 
+            aria-label="Subir imagen"
+          >
+              <UploadIcon className="w-5 h-5" />
+          </button>
+          <input type="file" ref={imageInputRef} onChange={handleImageSelect} accept="image/*" hidden />
+        </div>
+        <button onClick={onResetChat} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors p-2 rounded-md -mr-2">
+          <NewChatIcon /> Nueva Conversación
+        </button>
+      </div>
+
+      <div className="relative flex-grow">
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full h-full min-h-[150px] bg-gray-900/70 border border-gray-600 rounded-lg p-4 pr-20 text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none overflow-y-hidden"
+          placeholder="Escribe el texto a traducir o usa el micrófono..."
+          disabled={isLoading}
+        />
+        <div className="absolute top-3 right-3 flex flex-col space-y-2">
+          {text && (
+            <button onClick={() => onTextChange('')} className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors" aria-label="Limpiar texto">
+              <ClearIcon className="w-4 h-4 text-gray-400"/>
+            </button>
+          )}
+          <button onClick={handleToggleListening} className={`p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors ${isListening ? 'text-red-500 animate-pulse' : 'text-gray-300'}`} aria-label="Grabar voz">
+            <MicrophoneIcon className="w-5 h-5"/>
+          </button>
+        </div>
+      </div>
+      
+      <button onClick={handleTranslateClick} disabled={isLoading || !text.trim()} className="w-full flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+        <TranslateIcon />
+        <span>{isLoading ? 'Traduciendo...' : 'Traducir'}</span>
+      </button>
+
+      <div className="grid grid-cols-1 gap-3">
+        <div className="flex rounded-md shadow-sm">
+            <input type="text" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="Tema para la historia (opcional)" className="flex-1 block w-full rounded-none rounded-l-md bg-gray-700 border-gray-600 text-sm p-2 focus:ring-blue-500 focus:border-blue-500"/>
+            <button onClick={() => onGenerateAndTranslate(theme)} disabled={isLoading} className="inline-flex items-center px-3 py-2 border border-l-0 border-gray-600 bg-gray-700 rounded-r-md text-sm font-medium text-white hover:bg-gray-600 disabled:opacity-50 gap-2">
+                <SparklesIcon /> Generar
+            </button>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-700/50 pt-4 space-y-2">
+        <h3 className="text-sm font-semibold text-gray-300">Interactuar con la IA</h3>
+        <p className="text-xs text-gray-500">Pide cambios al texto original (ej. "hazlo más formal", "cambia 'coche' por 'carro'").</p>
+        <div className="relative flex items-center">
+            <input 
+                type="text" 
+                value={modifyInstruction}
+                onChange={(e) => setModifyInstruction(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleModify()}
+                placeholder="Tu instrucción aquí..."
+                className="w-full bg-gray-700 border-gray-600 rounded-md p-2 pr-20 text-sm focus:ring-blue-500 focus:border-blue-500"
                 disabled={isLoading}
-                className="p-3 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                 aria-label="Subir Imagen"
-            >
-                <UploadIcon />
-            </button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImageFileChange}
-                className="hidden"
-                accept="image/*"
             />
-            <button
-                onClick={handleToggleRecording}
-                disabled={isLoading || !!speechError}
-                aria-label={isRecording ? 'Detener grabación' : 'Grabar voz'}
-                className={`p-3 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${isRecording ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-gray-600 hover:bg-gray-700'}`}
-            >
-                <MicrophoneIcon className="h-6 w-6 text-white"/>
-            </button>
-             <button
-                onClick={handleClearClick}
-                disabled={isLoading || !text.trim()}
-                aria-label="Limpiar texto"
-                className="p-3 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                <ClearIcon className="h-6 w-6 text-white"/>
-            </button>
-            <button
-                onClick={handleTranslateClick}
-                disabled={isLoading || !text.trim()}
-                className="w-full flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-all duration-300 disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg transform hover:scale-105"
-            >
-               <TranslateIcon />
-               {isLoading ? 'Procesando...' : 'Traducir'}
-            </button>
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                 <button onClick={handleToggleModifyListening} className={`p-1.5 rounded-full hover:bg-gray-600 transition-colors ${isModifyListening ? 'text-red-500 animate-pulse' : 'text-gray-300'}`} aria-label="Grabar instrucción">
+                    <MicrophoneIcon className="w-5 h-5"/>
+                </button>
+                <button onClick={handleModify} disabled={!modifyInstruction.trim() || isLoading} className="p-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 transition-colors" aria-label="Enviar instrucción">
+                    <SendIcon className="w-5 h-5"/>
+                </button>
+            </div>
         </div>
       </div>
     </div>
   );
-});
+};
+
+export default forwardRef(LanguageInputComponent);
