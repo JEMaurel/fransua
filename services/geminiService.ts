@@ -79,6 +79,8 @@ const startTranslationChat = () => {
 - Divide el texto en oraciones si es necesario y proporciona una traducción y pronunciación para cada una.
 - Si el usuario te pide que cambies algo (por ejemplo, "cambia 'coche' por 'auto'"), entiende que se refiere al texto anterior y proporciona una traducción nueva y completa de la frase modificada.
 - Mantén el contexto de la conversación para permitir traducciones iterativas.`,
+            responseMimeType: "application/json",
+            responseSchema: translationSchema,
         },
     });
 };
@@ -94,6 +96,8 @@ const startDialogueChat = () => {
 - Después de cada respuesta tuya, sugiere una posible respuesta para el usuario, incluyendo su traducción al español y una guía fonética.
 - Siempre responde en formato JSON que se ajuste al esquema proporcionado.
 - Si el usuario dice algo que no entiendes o que no tiene sentido, responde amablemente que no entendiste y haz una pregunta para volver a encarrilar la conversación. Por ejemplo: "Pardon, je n'ai pas compris. Pourriez-vous répéter ?" (Perdón, no entendí. ¿Podrías repetir?).`,
+            responseMimeType: "application/json",
+            responseSchema: dialogueSchema,
         },
     });
 };
@@ -112,10 +116,6 @@ export const continueDialogue = async (userMessage?: string) => {
         
         const response = await dialogueChat.sendMessage({
             message: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: dialogueSchema,
-            }
         });
 
         const jsonText = response.text.trim();
@@ -140,10 +140,6 @@ Texto: "${text}"`;
         
         const response = await chat.sendMessage({
             message: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: translationSchema,
-            }
         });
 
         const jsonText = response.text.trim();
